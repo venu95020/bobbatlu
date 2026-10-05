@@ -1,0 +1,19 @@
+{
+  "name": "store-pos-backend",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node --watch server.js",
+    "start": "node server.js",
+    "check": "node --check server.js && node --check src/auth.js && node --check src/db.js && node --check src/store.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^5.1.0",
+    "express-rate-limit": "^7.5.0",
+    "nodemailer": "^10.0.13",
+    "pg": "^8.13.1"
+  }
+}
