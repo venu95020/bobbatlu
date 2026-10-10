@@ -1,3 +1,149 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+.receipt {
+	width: 100%;
+}
+
+.receipt-header {
+	display: flex;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: 3mm;
+}
+
+.receipt-brand h2 {
+	font-size: 1.5rem;
+	font-weight: 700;
+}
+
+.receipt-brand p {
+	font-size: 1rem;
+	font-weight: 600;
+}
+
+.receipt-meta {
+	text-align: right;
+	font-size: 0.75rem;
+}
+
+.receipt-rule {
+	margin: 3mm 0;
+	border: 0;
+	border-top: 1px solid #000;
+}
+
+.receipt-item {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) 9mm 19mm;
+	gap: 1mm;
+	align-items: start;
+	margin-bottom: 1.5mm;
+	font-size: 0.8rem;
+}
+
+.receipt-item strong:nth-child(2),
+.receipt-item strong:nth-child(3) {
+	text-align: right;
+}
+
+.receipt-item-heading {
+	margin-bottom: 2mm;
+}
+
+.receipt-total {
+	display: flex;
+	justify-content: space-between;
+	margin-top: 3mm;
+	padding-top: 2mm;
+	border-top: 1px solid #000;
+	font-size: 1rem;
+	font-weight: 700;
+}
+
+@page {
+	size: 80mm auto;
+	margin: 0;
+}
+
+@media print {
+	html,
+	body,
+	#root {
+		width: 72mm;
+		min-width: 72mm;
+		margin: 0 !important;
+		padding: 0 !important;
+		background: #fff !important;
+	}
+
+	body * {
+		visibility: hidden !important;
+	}
+
+	.receipt,
+	.receipt * {
+		visibility: visible !important;
+	}
+
+	.receipt {
+		position: absolute;
+		top: 0;
+		left: 0;
+		width: 72mm !important;
+		max-width: 72mm !important;
+		margin: 0 !important;
+		padding: 2mm !important;
+		border: 0 !important;
+		border-radius: 0 !important;
+		box-shadow: none !important;
+		color: #000 !important;
+		background: #fff !important;
+		font-family: Arial, sans-serif;
+		font-size: 10pt;
+		line-height: 1.3;
+		-webkit-print-color-adjust: exact;
+		print-color-adjust: exact;
+	}
+
+	.receipt-header {
+		gap: 2mm;
+	}
+
+	.receipt-brand h2 {
+		font-size: 13pt !important;
+		line-height: 1.2 !important;
+	}
+
+	.receipt-brand p,
+	.receipt-meta,
+	.receipt-item {
+		color: #000 !important;
+		font-size: 9pt !important;
+	}
+
+	.receipt-rule {
+		margin: 2.5mm 0 !important;
+	}
+
+	.receipt-item {
+		grid-template-columns: minmax(0, 1fr) 8mm 18mm !important;
+		gap: 1mm !important;
+		break-inside: avoid;
+	}
+
+	.receipt-item strong:first-child {
+		overflow-wrap: anywhere;
+	}
+
+	.receipt-total {
+		margin-top: 3mm !important;
+		padding-top: 2mm !important;
+		break-inside: avoid;
+	}
+
+	.receipt button {
+		display: none !important;
+	}
+}

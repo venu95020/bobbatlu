@@ -130,24 +130,30 @@ export default function Sale() {
 
       {receipt ? (
         <article className="receipt mx-auto max-w-lg bg-white p-6 text-slate-900 print:max-w-none print:p-0">
-          <div className="text-center">
-            <h2 className="text-2xl font-bold">BOBBATLU</h2>
-            <p className="mt-1 text-sm">Payment receipt</p>
+          <div className="receipt-header">
+            <div className="receipt-brand">
+              <h2>Samruddhi</h2>
+              <p>Bobbatlu</p>
+            </div>
+            <div className="receipt-meta">
+              <p><strong>Invoice:</strong> {receipt.invoice_number ?? receipt.bill_no}</p>
+              <p><strong>Date:</strong> {new Date(receipt.created_at).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' })}</p>
+              <p><strong>Time:</strong> {new Date(receipt.created_at).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Kolkata' })}</p>
+              <p><strong>Payment:</strong> {receipt.payment_method.toUpperCase()}</p>
+            </div>
           </div>
-          <div className="my-5 border-y border-dashed border-slate-400 py-3 text-sm">
-            <p>Bill: {receipt.bill_no}</p>
-            <p>Date: {new Date(receipt.created_at).toLocaleString()}</p>
-            <p>Payment: {receipt.payment_method.toUpperCase()}</p>
-          </div>
-          <div className="space-y-2">
+          <hr className="receipt-rule" />
+          <div className="receipt-items">
+            <div className="receipt-item receipt-item-heading">
+              <strong>Item</strong><strong>Qty</strong><strong>Amount</strong>
+            </div>
             {receipt.items.map((item, index) => (
-              <div key={`${item.name}-${index}`} className="grid grid-cols-[1fr_auto] gap-4 text-sm">
-                <span>{item.name} × {item.quantity}</span><span>{money(item.lineTotal)}</span>
+              <div key={`${item.name}-${index}`} className="receipt-item">
+                <strong>{item.name}</strong><strong>{item.quantity}</strong><strong>{money(item.lineTotal)}</strong>
               </div>
             ))}
           </div>
-          <div className="mt-4 flex justify-between border-t border-slate-400 pt-3 text-lg font-bold"><span>Total paid</span><span>{money(receipt.total)}</span></div>
-          <p className="mt-6 text-center text-sm">Thank you</p>
+          <div className="receipt-total"><strong>Total paid</strong><strong>{money(receipt.total)}</strong></div>
           <div className="mt-6 flex justify-center gap-3 print:hidden">
             <button onClick={() => window.print()} className="rounded-md bg-terracotta-700 px-5 py-2.5 font-semibold text-white">Print receipt</button>
             <button onClick={startNewSale} className="rounded-md border border-slate-300 px-5 py-2.5 font-semibold text-slate-700">New sale</button>

@@ -99,9 +99,17 @@ router.post('/orders', async (request, response, next) => {
       return { product, quantity, lineCents: unitCents * quantity }
     })
     const totalCents = lines.reduce((sum, line) => sum + line.lineCents, 0)
-    const billNo = `POS-${Date.now()}-${randomBytes(3).toString('hex').toUpperCase()}`
 
     await client.query('BEGIN')
+    const invoiceSequence = await client.query(
+      `INSERT INTO invoice_sequences (sale_date, last_number)
+       VALUES ((NOW() AT TIME ZONE 'Asia/Kolkata')::date, 1)
+       ON CONFLICT (sale_date)
+       DO UPDATE SET last_number = invoice_sequences.last_number + 1
+       RETURNING sale_date::text, last_number`,
+    )
+    const { sale_date: saleDate, last_number: invoiceNumber } = invoiceSequence.rows[0]
+    const billNo = `INV-${saleDate.replaceAll('-', '')}-${invoiceNumber}`
     const paymentStatus = paymentMethod === 'cash' ? 'paid' : 'pending'
     const orderResult = await client.query(
       `INSERT INTO orders (bill_no, user_id, subtotal, tax, total, payment_method, payment_status)
@@ -140,6 +148,7 @@ router.post('/orders', async (request, response, next) => {
         )
         return response.status(201).json({
           ...order,
+          invoice_number: invoiceNumber,
           qr: { id: qr.id, imageUrl: qr.image_url, expiresAt: qr.close_by },
           items: lines.map(({ product, quantity, lineCents }) => ({
             name: product.name,
@@ -156,6 +165,7 @@ router.post('/orders', async (request, response, next) => {
 
     return response.status(201).json({
       ...order,
+      invoice_number: invoiceNumber,
       items: lines.map(({ product, quantity, lineCents }) => ({
         name: product.name,
         price: product.price,
