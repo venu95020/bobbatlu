@@ -154,6 +154,7 @@ export default function Sale() {
             ))}
           </div>
           <div className="receipt-total"><strong>Total paid</strong><strong>{money(receipt.total)}</strong></div>
+          <p className="receipt-thanks">Thank you</p>
           <div className="mt-6 flex justify-center gap-3 print:hidden">
             <button onClick={() => window.print()} className="rounded-md bg-terracotta-700 px-5 py-2.5 font-semibold text-white">Print receipt</button>
             <button onClick={startNewSale} className="rounded-md border border-slate-300 px-5 py-2.5 font-semibold text-slate-700">New sale</button>
