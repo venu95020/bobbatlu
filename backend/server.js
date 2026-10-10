@@ -1,5 +1,6 @@
 import 'dotenv/config'
 import { randomBytes } from 'node:crypto'
+import { fileURLToPath } from 'node:url'
 import cors from 'cors'
 import express from 'express'
 import authRouter, { requireAuth } from './src/auth.js'
@@ -11,6 +12,7 @@ process.env.OTP_SECRET ||= randomBytes(32).toString('hex')
 
 const app = express()
 const port = Number(process.env.PORT || 3000)
+const frontendDistPath = fileURLToPath(new URL('../frontend/dist/', import.meta.url))
 let databaseReady = false
 const allowedOrigins = (process.env.FRONTEND_ORIGIN || 'http://localhost:5173')
   .split(',')
@@ -41,6 +43,16 @@ app.post('/api/auth/logout', requireAuth, async (request, response, next) => {
     return next(error)
   }
 })
+
+if (process.env.NODE_ENV === 'production') {
+  app.use(express.static(frontendDistPath, { index: false }))
+  app.use((request, response, next) => {
+    if (request.method !== 'GET' || request.path === '/api' || request.path.startsWith('/api/')) {
+      return next()
+    }
+    return response.sendFile('index.html', { root: frontendDistPath }, next)
+  })
+}
 
 app.use((error, _request, response, _next) => {
   console.error('API request failed:', error.message)
