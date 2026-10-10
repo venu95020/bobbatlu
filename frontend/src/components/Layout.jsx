@@ -16,7 +16,7 @@ export default function Layout() {
   const order = ['/sale', '/menu', '/reports', '/settings']
   const items = order.map((p) => NAV.find((n) => n.to === p))
   return (
-    <div className="min-h-screen md:flex">
+    <div className="app-shell min-h-screen md:flex">
       <aside className="hidden w-60 flex-col border-r bg-white p-4 md:flex">
         <NavLink to="/dashboard" className="mb-6 px-2 text-xl font-bold text-terracotta-700">BOBBATLU</NavLink>
         <nav className="flex flex-col gap-1">
@@ -26,7 +26,7 @@ export default function Layout() {
         </nav>
         <button onClick={logout} className="mt-auto rounded-lg border px-4 py-3 text-sm font-medium text-slate-600 hover:bg-slate-100">Logout</button>
       </aside>
-      <main className="flex-1 p-4 pb-24 md:p-8 md:pb-8">
+      <main className="app-main flex-1 p-4 pb-24 md:p-8 md:pb-8">
         <Outlet />
       </main>
       <nav className="fixed inset-x-0 bottom-0 z-10 flex border-t bg-white md:hidden">

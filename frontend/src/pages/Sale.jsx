@@ -120,7 +120,7 @@ export default function Sale() {
   }
 
   return (
-    <section className="mx-auto max-w-6xl">
+    <section className="sale-page mx-auto max-w-6xl">
       <header className="mb-6 border-b border-slate-200 pb-4 print:hidden">
         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-terracotta-700">Checkout</p>
         <h1 className="mt-1 text-3xl font-bold text-slate-900">New sale</h1>

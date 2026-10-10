@@ -89,6 +89,21 @@
 		display: none !important;
 	}
 
+	#root,
+	.app-shell,
+	.app-main,
+	.sale-page {
+		display: block !important;
+		width: 72mm !important;
+		min-width: 0 !important;
+		min-height: 0 !important;
+		margin: 0 !important;
+		padding: 0 !important;
+		border: 0 !important;
+		background: #fff !important;
+		box-shadow: none !important;
+	}
+
 	.receipt,
 	.receipt * {
 		display: revert !important;
@@ -118,6 +133,20 @@
 	.receipt-header {
 		display: flex !important;
 		gap: 2mm;
+	}
+
+	.receipt-brand,
+	.receipt-meta {
+		display: block !important;
+	}
+
+	.receipt-meta p {
+		display: block !important;
+		margin: 0 !important;
+	}
+
+	.receipt-items {
+		display: block !important;
 	}
 
 	.receipt-brand h2 {
