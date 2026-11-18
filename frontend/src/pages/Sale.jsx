@@ -8,8 +8,6 @@ export default function Sale() {
   const [cart, setCart] = useState([])
   const [paymentMethod, setPaymentMethod] = useState('cash')
   const [receipt, setReceipt] = useState(null)
-  const [qrOrder, setQrOrder] = useState(null)
-  const [paymentStatus, setPaymentStatus] = useState('pending')
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
   const [printWhenReady, setPrintWhenReady] = useState(false)
@@ -31,36 +29,6 @@ export default function Sale() {
     }, 150)
     return () => clearTimeout(timer)
   }, [receipt, printWhenReady])
-
-  useEffect(() => {
-    if (!qrOrder || paymentStatus !== 'pending') return undefined
-    let cancelled = false
-    let timer
-    const checkPayment = async () => {
-      try {
-        const { data } = await api.get(`/store/orders/${qrOrder.id}/payment`)
-        if (cancelled) return
-        if (data.status === 'paid') {
-          setReceipt({ ...qrOrder, payment_status: 'paid' })
-          setPrintWhenReady(true)
-          setQrOrder(null)
-          return
-        }
-        if (data.status === 'expired' || data.status === 'failed') {
-          setPaymentStatus(data.status)
-          return
-        }
-      } catch {
-        if (!cancelled) setError('Could not check payment status. Keep this screen open and retry shortly.')
-      }
-      if (!cancelled) timer = setTimeout(checkPayment, 1000)
-    }
-    void checkPayment()
-    return () => {
-      cancelled = true
-      clearTimeout(timer)
-    }
-  }, [qrOrder, paymentStatus])
 
   function addToCart(item) {
     setReceipt(null)
@@ -88,13 +56,8 @@ export default function Sale() {
         items: cart.map((item) => ({ productId: item.id, quantity: item.quantity })),
       })
       setCart([])
-      if (method === 'upi') {
-        setPaymentStatus('pending')
-        setQrOrder(data)
-      } else {
-        setReceipt(data)
-        setPrintWhenReady(true)
-      }
+      setReceipt(data)
+      setPrintWhenReady(true)
     } catch (requestError) {
       const serverMessage = requestError.response?.data?.message
       const failureDetail = requestError.response
@@ -108,15 +71,12 @@ export default function Sale() {
 
   function startNewSale() {
     setReceipt(null)
-    setQrOrder(null)
-    setPaymentStatus('pending')
     setPaymentMethod('cash')
     setError('')
   }
 
   function selectPaymentMethod(method) {
     setPaymentMethod(method)
-    if (method === 'upi' && cart.length && !busy) void completeSale('upi')
   }
 
   return (
@@ -159,20 +119,6 @@ export default function Sale() {
             <button onClick={() => window.print()} className="rounded-md bg-terracotta-700 px-5 py-2.5 font-semibold text-white">Print receipt</button>
             <button onClick={startNewSale} className="rounded-md border border-slate-300 px-5 py-2.5 font-semibold text-slate-700">New sale</button>
           </div>
-        </article>
-      ) : qrOrder ? (
-        <article className="mx-auto max-w-lg border border-slate-200 bg-white p-6 text-center">
-          <h2 className="text-xl font-bold text-slate-900">Scan to pay</h2>
-          <p className="mt-2 text-sm text-slate-600">Bill {qrOrder.bill_no}</p>
-          <p className="mt-1 text-2xl font-bold text-slate-900">{money(qrOrder.total)}</p>
-          <img src={qrOrder.qr.imageUrl} alt="Razorpay UPI payment QR code" className="mx-auto my-1 aspect-square w-full max-w-[28rem] object-cover " />
-          {paymentStatus === 'pending' ? <>
-            <p role="status" className="text-sm font-medium text-terracotta-800">Waiting for UPI payment confirmation…</p>
-            <p className="mt-2 text-xs text-slate-500">This single-use QR is for this bill and expires in 15 minutes.</p>
-          </> : <>
-            <p role="status" className="text-sm font-semibold text-rose-700">{paymentStatus === 'expired' ? 'This QR code has expired. No payment was confirmed.' : 'The payment could not be completed.'}</p>
-            <button onClick={startNewSale} className="mt-5 rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700">Return to checkout</button>
-          </>}
         </article>
       ) : (
         <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_22rem]">
@@ -217,7 +163,7 @@ export default function Sale() {
                 ))}
               </div>
             </fieldset>
-            <button disabled={!cart.length || busy} onClick={() => completeSale()} className="mt-4 w-full rounded-md bg-terracotta-700 px-4 py-3 font-semibold text-white hover:bg-terracotta-800 disabled:cursor-not-allowed disabled:opacity-50">{busy ? paymentMethod === 'upi' ? 'Generating QR…' : 'Saving sale…' : paymentMethod === 'upi' ? 'Generate UPI QR' : 'Save & Print'}</button>
+            <button disabled={!cart.length || busy} onClick={() => completeSale()} className="mt-4 w-full rounded-md bg-terracotta-700 px-4 py-3 font-semibold text-white hover:bg-terracotta-800 disabled:cursor-not-allowed disabled:opacity-50">{busy ? 'Saving sale…' : 'Save & Print'}</button>
           </aside>
         </div>
       )}

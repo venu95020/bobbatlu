@@ -1,41 +1,7 @@
-import { randomBytes } from 'node:crypto'
 import { Router } from 'express'
 import { pool } from './db.js'
 
 const router = Router()
-
-function razorpayCredentials() {
-  const keyId = process.env.RAZORPAY_KEY_ID
-  const keySecret = process.env.RAZORPAY_KEY_SECRET
-  if (!keyId || !keySecret) {
-    const error = new Error('Razorpay is not configured. Add RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET to the backend .env.')
-    error.status = 503
-    throw error
-  }
-  return { keyId, keySecret }
-}
-
-async function razorpayRequest(path, options = {}) {
-  const { keyId, keySecret } = razorpayCredentials()
-  const response = await fetch(`https://api.razorpay.com/v1${path}`, {
-    ...options,
-    headers: {
-      Authorization: `Basic ${Buffer.from(`${keyId}:${keySecret}`).toString('base64')}`,
-      ...(options.body ? { 'Content-Type': 'application/json' } : {}),
-      ...options.headers,
-    },
-  })
-  const data = await response.json().catch(() => ({}))
-  if (!response.ok) {
-    const providerMessage = data.error?.description
-    const error = new Error(typeof providerMessage === 'string'
-      ? `Razorpay rejected QR creation: ${providerMessage}`
-      : 'Razorpay could not process the QR payment request. Check the Razorpay configuration.')
-    error.status = response.status === 401 ? 503 : 502
-    throw error
-  }
-  return data
-}
 
 router.get('/products', async (_request, response, next) => {
   try {
@@ -110,12 +76,11 @@ router.post('/orders', async (request, response, next) => {
     )
     const { sale_date: saleDate, last_number: invoiceNumber } = invoiceSequence.rows[0]
     const billNo = `INV-${saleDate.replaceAll('-', '')}-${invoiceNumber}`
-    const paymentStatus = paymentMethod === 'cash' ? 'paid' : 'pending'
     const orderResult = await client.query(
       `INSERT INTO orders (bill_no, user_id, subtotal, tax, total, payment_method, payment_status)
        VALUES ($1, $2, $3, 0, $3, $4, $5)
        RETURNING id, bill_no, subtotal, total, payment_method, payment_status, created_at`,
-      [billNo, request.user.id, (totalCents / 100).toFixed(2), paymentMethod, paymentStatus],
+      [billNo, request.user.id, (totalCents / 100).toFixed(2), paymentMethod, 'paid'],
     )
     const order = orderResult.rows[0]
     for (const line of lines) {
@@ -126,42 +91,6 @@ router.post('/orders', async (request, response, next) => {
       )
     }
     await client.query('COMMIT')
-
-    if (paymentMethod === 'upi') {
-      try {
-        const qr = await razorpayRequest('/payments/qr_codes', {
-          method: 'POST',
-          body: JSON.stringify({
-            type: 'upi_qr',
-            name: 'Bobbatlu',
-            usage: 'single_use',
-            fixed_amount: true,
-            payment_amount: totalCents,
-            description: `Payment for ${billNo}`,
-            close_by: Math.floor(Date.now() / 1000) + 900,
-          }),
-        })
-        if (!qr.id || !qr.image_url) throw new Error('Razorpay did not return a QR image.')
-        await pool.query(
-          'UPDATE orders SET razorpay_qr_code_id = $1 WHERE id = $2',
-          [qr.id, order.id],
-        )
-        return response.status(201).json({
-          ...order,
-          invoice_number: invoiceNumber,
-          qr: { id: qr.id, imageUrl: qr.image_url, expiresAt: qr.close_by },
-          items: lines.map(({ product, quantity, lineCents }) => ({
-            name: product.name,
-            price: product.price,
-            quantity,
-            lineTotal: (lineCents / 100).toFixed(2),
-          })),
-        })
-      } catch (error) {
-        await pool.query("UPDATE orders SET payment_status = 'failed' WHERE id = $1", [order.id])
-        return next(error)
-      }
-    }
 
     return response.status(201).json({
       ...order,
@@ -178,47 +107,6 @@ router.post('/orders', async (request, response, next) => {
     return next(error)
   } finally {
     client.release()
-  }
-})
-
-router.get('/orders/:id/payment', async (request, response, next) => {
-  try {
-    if (!/^\d+$/.test(request.params.id)) {
-      return response.status(404).json({ message: 'Sale not found.' })
-    }
-    const result = await pool.query(
-      `SELECT id, total, payment_status, razorpay_qr_code_id
-       FROM orders WHERE id = $1 AND user_id = $2 AND payment_method = 'upi'`,
-      [request.params.id, request.user.id],
-    )
-    const order = result.rows[0]
-    if (!order) return response.status(404).json({ message: 'Sale not found.' })
-    if (order.payment_status === 'paid') return response.json({ status: 'paid' })
-    if (order.payment_status !== 'pending' || !order.razorpay_qr_code_id) {
-      return response.json({ status: order.payment_status })
-    }
-
-    const qr = await razorpayRequest(`/payments/qr_codes/${encodeURIComponent(order.razorpay_qr_code_id)}`)
-    const expectedAmount = Math.round(Number(order.total) * 100)
-    if (Number(qr.payments_amount_received) >= expectedAmount && Number(qr.payments_count_received) > 0) {
-      await pool.query(
-        `UPDATE orders SET payment_status = 'paid', updated_at = NOW()
-         WHERE id = $1 AND payment_status = 'pending'`,
-        [order.id],
-      )
-      return response.json({ status: 'paid' })
-    }
-    if (qr.status === 'closed' || (qr.close_by && Number(qr.close_by) < Math.floor(Date.now() / 1000))) {
-      await pool.query(
-        `UPDATE orders SET payment_status = 'expired', updated_at = NOW()
-         WHERE id = $1 AND payment_status = 'pending'`,
-        [order.id],
-      )
-      return response.json({ status: 'expired' })
-    }
-    return response.json({ status: 'pending' })
-  } catch (error) {
-    return next(error)
   }
 })
 
